@@ -1,0 +1,156 @@
+services:
+
+  namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: bda-namenode
+    hostname: namenode
+    restart: unless-stopped
+    ports:
+      - "9870:9870"
+      - "9000:9000"
+    volumes:
+      - namenode:/hadoop/dfs/name
+    environment:
+      CLUSTER_NAME: bda-project
+      CORE_CONF_fs_defaultFS: hdfs://namenode:9000
+      CORE_CONF_hadoop_http_staticuser_user: root
+      HDFS_CONF_dfs_webhdfs_enabled: "true"
+      HDFS_CONF_dfs_permissions_enabled: "false"
+      HDFS_CONF_dfs_replication: "3"
+      HDFS_CONF_dfs_namenode_datanode_registration_ip___hostname___check: "false"
+    networks:
+      - hadoop
+
+  datanode1:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: bda-datanode1
+    hostname: datanode1
+    restart: unless-stopped
+    depends_on:
+      - namenode
+    ports:
+      - "9864:9864"
+    volumes:
+      - datanode1:/hadoop/dfs/data
+    environment:
+      SERVICE_PRECONDITION: "namenode:9870"
+      CORE_CONF_fs_defaultFS: hdfs://namenode:9000
+      CORE_CONF_hadoop_http_staticuser_user: root
+      HDFS_CONF_dfs_webhdfs_enabled: "true"
+      HDFS_CONF_dfs_permissions_enabled: "false"
+      HDFS_CONF_dfs_replication: "3"
+      HDFS_CONF_dfs_namenode_datanode_registration_ip___hostname___check: "false"
+    networks:
+      - hadoop
+
+  datanode2:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: bda-datanode2
+    hostname: datanode2
+    restart: unless-stopped
+    depends_on:
+      - namenode
+    ports:
+      - "9865:9864"
+    volumes:
+      - datanode2:/hadoop/dfs/data
+    environment:
+      SERVICE_PRECONDITION: "namenode:9870"
+      CORE_CONF_fs_defaultFS: hdfs://namenode:9000
+      CORE_CONF_hadoop_http_staticuser_user: root
+      HDFS_CONF_dfs_webhdfs_enabled: "true"
+      HDFS_CONF_dfs_permissions_enabled: "false"
+      HDFS_CONF_dfs_replication: "3"
+      HDFS_CONF_dfs_namenode_datanode_registration_ip___hostname___check: "false"
+    networks:
+      - hadoop
+
+  datanode3:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: bda-datanode3
+    hostname: datanode3
+    restart: unless-stopped
+    depends_on:
+      - namenode
+    ports:
+      - "9866:9864"
+    volumes:
+      - datanode3:/hadoop/dfs/data
+    environment:
+      SERVICE_PRECONDITION: "namenode:9870"
+      CORE_CONF_fs_defaultFS: hdfs://namenode:9000
+      CORE_CONF_hadoop_http_staticuser_user: root
+      HDFS_CONF_dfs_webhdfs_enabled: "true"
+      HDFS_CONF_dfs_permissions_enabled: "false"
+      HDFS_CONF_dfs_replication: "3"
+      HDFS_CONF_dfs_namenode_datanode_registration_ip___hostname___check: "false"
+    networks:
+      - hadoop
+
+  resourcemanager:
+    image: bde2020/hadoop-resourcemanager:2.0.0-hadoop3.2.1-java8
+    container_name: bda-resourcemanager
+    hostname: resourcemanager
+    restart: unless-stopped
+    depends_on:
+      - namenode
+      - datanode1
+      - datanode2
+      - datanode3
+    ports:
+      - "8088:8088"
+    environment:
+      SERVICE_PRECONDITION: "namenode:9870 datanode1:9864"
+      CORE_CONF_fs_defaultFS: hdfs://namenode:9000
+      CORE_CONF_hadoop_http_staticuser_user: root
+      YARN_CONF_yarn_resourcemanager_hostname: resourcemanager
+      MAPRED_CONF_mapreduce_framework_name: yarn
+    networks:
+      - hadoop
+
+  nodemanager:
+    image: bde2020/hadoop-nodemanager:2.0.0-hadoop3.2.1-java8
+    container_name: bda-nodemanager
+    hostname: nodemanager
+    restart: unless-stopped
+    depends_on:
+      - resourcemanager
+    environment:
+      SERVICE_PRECONDITION: "namenode:9870 datanode1:9864 datanode2:9864 datanode3:9864 resourcemanager:8088"
+      CORE_CONF_fs_defaultFS: hdfs://namenode:9000
+      CORE_CONF_hadoop_http_staticuser_user: root
+      YARN_CONF_yarn_resourcemanager_hostname: resourcemanager
+      MAPRED_CONF_mapreduce_framework_name: yarn
+    networks:
+      - hadoop
+
+  historyserver:
+    image: bde2020/hadoop-historyserver:2.0.0-hadoop3.2.1-java8
+    container_name: bda-historyserver
+    hostname: historyserver
+    restart: unless-stopped
+    depends_on:
+      - resourcemanager
+    ports:
+      - "19888:19888"
+    volumes:
+      - historyserver:/hadoop/yarn/timeline
+    environment:
+      SERVICE_PRECONDITION: "namenode:9870 resourcemanager:8088"
+      CORE_CONF_fs_defaultFS: hdfs://namenode:9000
+      CORE_CONF_hadoop_http_staticuser_user: root
+      YARN_CONF_yarn_resourcemanager_hostname: resourcemanager
+      MAPRED_CONF_mapreduce_framework_name: yarn
+    networks:
+      - hadoop
+
+volumes:
+  namenode:
+  datanode1:
+  datanode2:
+  datanode3:
+  historyserver:
+
+networks:
+  hadoop:
+    driver: bridge
